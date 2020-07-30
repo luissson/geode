@@ -60,7 +60,7 @@ import org.apache.geode.cache.client.proxy.ProxySocketFactories;
 public class DualServerSNIAcceptanceTest {
 
   private static final URL DOCKER_COMPOSE_PATH =
-      SingleServerSNIAcceptanceTest.class.getResource("docker-compose.yml");
+      SingleServerSNIAcceptanceTest.class.getResource("docker-compose-ha.yml");
 
   // Docker compose does not work on windows in CI. Ignore this test on windows
   // Using a RuleChain to make sure we ignore the test before the rule comes into play

@@ -32,13 +32,13 @@ services:
       - ./scripts:/geode/scripts
   haproxy:
     container_name: 'haproxy'
-    image: 'envoyproxy/envoy-dev:latest'
+    image: 'haproxy:2.1'
     ports:
       - "15443"
     networks:
       geode-sni-test:
     volumes:
-      - ./envoy.yaml:/usr/local/etc/envoy/envoy.yaml:ro
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
 networks:
   geode-sni-test:
 

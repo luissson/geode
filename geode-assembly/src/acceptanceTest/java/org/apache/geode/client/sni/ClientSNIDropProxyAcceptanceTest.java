@@ -49,7 +49,7 @@ import org.apache.geode.cache.client.proxy.ProxySocketFactories;
 public class ClientSNIDropProxyAcceptanceTest {
 
   private static final URL DOCKER_COMPOSE_PATH =
-      ClientSNIDropProxyAcceptanceTest.class.getResource("docker-compose.yml");
+      ClientSNIDropProxyAcceptanceTest.class.getResource("docker-compose-ha.yml");
 
   // Docker compose does not work on windows in CI. Ignore this test on windows
   // Using a RuleChain to make sure we ignore the test before the rule comes into play
@@ -123,7 +123,7 @@ public class ClientSNIDropProxyAcceptanceTest {
 
   /**
    * Use this variant to (re)start the container on whatever port(s) is specified in
-   * docker-compose.yml. Usually that would look something like:
+   * docker-compose-ha.yml. Usually that would look something like:
    *
    * ports:
    * - "15443:15443"
@@ -138,7 +138,7 @@ public class ClientSNIDropProxyAcceptanceTest {
 
   /**
    * Use this variant to (re)start the container whatever host port it was bound to before
-   * it was stopped. Usually you'll want the ports spec in docker-compose.yml to look like
+   * it was stopped. Usually you'll want the ports spec in docker-compose-ha.yml to look like
    * this when using this method (allowing Docker to initially choose a random host port
    * to bind to):
    *

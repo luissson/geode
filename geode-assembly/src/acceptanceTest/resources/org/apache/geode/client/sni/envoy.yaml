@@ -1,0 +1,57 @@
+static_resources:
+  listeners:
+    - name: listener_0
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 15443 }
+      listener_filters:
+        - name: envoy.listener.tls_inspector
+      filter_chains:
+        - filter_chain_match:
+            server_names: ["locator-maeve"]
+            transport_protocol: tls
+          filters:
+            - name: envoy.tcp_proxy
+              typed_config:
+                "@type": type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy
+                stat_prefix: example_tcp
+                cluster: locators-maeve
+        - filter_chain_match:
+            server_names: ["server-dolores"]
+            transport_protocol: tls
+          filters:
+            - name: envoy.tcp_proxy
+              typed_config:
+                "@type": type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy
+                stat_prefix: example_tcp
+                cluster: servers-dolores
+
+clusters:
+  - name: "locators-maeve"
+    connect_timeout: 1s
+    type: STRICT_DNS
+    dns_refresh_rate: 120s
+    dns_lookup_family: V4_ONLY
+    load_assignment:
+      cluster_name: "locators-maeve"
+      endpoints:
+        - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: "geode"
+                    port_value: 10344
+
+  - name: "servers-dolores"
+    connect_timeout: 1s
+    type: STRICT_DNS
+    dns_refresh_rate: 120s
+    dns_lookup_family: V4_ONLY
+    load_assignment:
+      cluster_name: "servers-dolores"
+      endpoints:
+        - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: "geode"
+                    port_value: 40404
