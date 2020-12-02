@@ -2384,7 +2384,6 @@ public class DistributedRegion extends LocalRegion implements InternalDistribute
     // this next step also distributes the object to other processes, if necessary
     try {
       re = basicPutEntry(event, lastModified);
-
       // Update client event with latest version tag from re.
       if (re != null && clientEvent != null) {
         clientEvent.setVersionTag(event.getVersionTag());

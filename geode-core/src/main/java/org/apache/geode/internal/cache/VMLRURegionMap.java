@@ -14,6 +14,8 @@
  */
 package org.apache.geode.internal.cache;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -237,7 +239,9 @@ public class VMLRURegionMap extends AbstractRegionMap {
     LocalRegion region = _getOwner();
     if (action.isLocalDestroy()) {
       int size = entry.getEntrySize();
+      logger.info("#LRJ evictEntry: evicting entry {}", entry.toString());
       if (region.evictDestroy(entry)) {
+        logger.info("#LRJ evictEntry: successfully evicted entry {}", entry.toString());
         stats.incDestroys();
         return size;
       } else {
@@ -475,6 +479,11 @@ public class VMLRURegionMap extends AbstractRegionMap {
                     "evicted entry key(2)={} total entry size is now: {} bytesToEvict: {}",
                     removalEntry.getKey(), getTotalEntrySize(), bytesToEvict);
               }
+
+              logger.info(
+                  "#LRJ lruUpdateCallback: evicted entry key(2)={} total entry size is now: {} bytesToEvict: {}",
+                  removalEntry.getKey(), getTotalEntrySize(), bytesToEvict);
+
               stats.incEvictions();
               if (_isOwnerALocalRegion()) {
                 _getOwner().incBucketEvictions();
@@ -496,6 +505,9 @@ public class VMLRURegionMap extends AbstractRegionMap {
         }
         changeTotalEntrySize(delta);
       } catch (RegionClearedException e) {
+
+        logger.info("#LRJ hit lruUpdateCallback catch block", e);
+
         if (isDebugEnabled_LRU) {
           logger.debug("exception ={}", e.getCause().getMessage(), e.getCause());
         }
@@ -716,6 +728,11 @@ public class VMLRURegionMap extends AbstractRegionMap {
   @Override
   public void lruEntryDestroy(RegionEntry regionEntry) {
     final EvictableEntry e = (EvictableEntry) regionEntry;
+    logger.info(
+        "lruEntryDestroy for key={}; list size is: {}; actual size is: {}; map size is: {}; entry size: {}; in lru clock: {}",
+        regionEntry.getKey(), getTotalEntrySize(), this.getEvictionList().size(), size(),
+        e.getEntrySize(), !e.isEvicted());
+    
     if (logger.isTraceEnabled(LogMarker.LRU_VERBOSE)) {
       logger.trace(LogMarker.LRU_VERBOSE,
           "lruEntryDestroy for key={}; list size is: {}; actual size is: {}; map size is: {}; entry size: {}; in lru clock: {}",
@@ -782,6 +799,14 @@ public class VMLRURegionMap extends AbstractRegionMap {
     // We assume here that a LRURegionMap contains LRUEntries
     EvictableEntry lruRe = (EvictableEntry) regionEntry;
     if (lruRe.isInUseByTransaction() || lruRe.isDestroyed()) {
+
+      StringWriter sw = new StringWriter();
+      PrintWriter pw = new PrintWriter(sw);
+      new Exception().printStackTrace(pw);
+      logger.info("#LRJ confirmEvictionDestroy tx or destroy?: " + lruRe.isInUseByTransaction() + " " + lruRe.isDestroyed());
+      logger.info("#LRJ confirmEvictionDestroy region entry: " + regionEntry.toString());
+      logger.info("#LRJ confirmEvictionDestroy stack trace: " + sw.toString());
+
       lruRe.unsetEvicted();
       return false;
     } else {

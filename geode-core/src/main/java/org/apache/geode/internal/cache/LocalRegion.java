@@ -1379,6 +1379,9 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
           // serialize search/load threads if not in txn
           value = getDataView().findObject(keyInfo, this, isCreate, generateCallbacks, value,
               disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones);
+
+          logger.info("#LRJ LocalRegion: findObject return for key {}: {}", key, value);
+
           if (!returnTombstones && value == Token.TOMBSTONE) {
             value = null;
           }
@@ -1469,6 +1472,8 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
       isCreate = localValue == null;
       result = findObjectInSystem(keyInfo, isCreate, null, generateCallbacks, localValue,
           disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones);
+
+      logger.info("#LRJ getObject: findObjectInSystem returned {}", result);
 
     } else {
       // For PRs we don't want to deserialize the value and we can't use findObjectInSystem
@@ -2096,6 +2101,7 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
   public int getRegionSize() {
     synchronized (getSizeGuard()) {
       int result = getRegionMap().size();
+
       // if this is a client with no tombstones then we subtract the number
       // of entries being affected by register-interest refresh
       if (imageState.isClient() && !getConcurrencyChecksEnabled()) {
@@ -6493,7 +6499,6 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
     // region and instead replace the value
     // in the map with a DESTROYED token
     final boolean inRI = !needTokensForGII && !event.isFromRILocalDestroy() && lockRIReadLock();
-
     // at this point riCnt is guaranteed to be correct and we know for sure
     // whether a RI is in progress and that riCnt will not change during this
     // destroy operation
@@ -6619,7 +6624,7 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
 
     @Released
     final EntryEventImpl event = generateEvictDestroyEvent(entry.getKey());
-
+    logger.info("#LRJ evictDestroy: created event succcessfully for key {}", entry.getKey());
     try {
       return mapDestroy(event, false, // cacheWrite
           true, // isEviction
@@ -8402,6 +8407,7 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
       value = destroy(key);
     } catch (EntryNotFoundException ignore) {
       // No need to log this exception; caller can test for null;
+      logger.info("#LRJ encountered EntryNotFound LocalRegion.remove key {}", key, ignore);
     }
     return value;
   }

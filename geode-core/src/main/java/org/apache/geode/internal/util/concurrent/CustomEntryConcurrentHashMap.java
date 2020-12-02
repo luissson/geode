@@ -41,6 +41,12 @@ package org.apache.geode.internal.util.concurrent;
 
 import java.io.IOException;
 import java.io.Serializable;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
+import java.sql.Timestamp;
+
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -52,6 +58,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -65,6 +72,7 @@ import org.apache.geode.internal.offheap.OffHeapRegionEntryHelper;
 import org.apache.geode.internal.size.SingleObjectSizer;
 import org.apache.geode.internal.util.ArrayUtils;
 import org.apache.geode.logging.internal.executors.LoggingThread;
+import org.apache.geode.logging.internal.log4j.api.LogService;
 
 /**
  * A hash table supporting full concurrency of retrievals and adjustable expected concurrency for
@@ -1328,6 +1336,15 @@ public class CustomEntryConcurrentHashMap<K, V> extends AbstractMap<K, V>
     long sum = 0;
     long check = 0;
     final int[] mc = new int[segments.length];
+
+    boolean verifyCaller = false;
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    new Exception().printStackTrace(pw);
+    if(sw.toString().contains("HydraTask_verifyCapacity")){
+      verifyCaller = true;
+    }
+
     // Try a few times to get accurate count. On failure due to
     // continuous async changes in table, resort to locking.
     for (int k = 0; k < RETRIES_BEFORE_LOCK; ++k) {
@@ -1337,6 +1354,16 @@ public class CustomEntryConcurrentHashMap<K, V> extends AbstractMap<K, V>
       for (int i = 0; i < segments.length; ++i) {
         sum += segments[i].count;
         mcsum += mc[i] = segments[i].modCount;
+
+        if(verifyCaller){
+          LogService.getLogger().info("#LRJ test conclusion, region.size(): ");
+          for(HashEntry<K, V> entry : segments[i].table) {
+            if (entry != null){
+              LogService.getLogger().info("#LRJ entry: " + entry.toString());
+            }
+          }
+          LogService.getLogger().info("#LRJ size sum: " + sum);
+        }
       }
       if (mcsum != 0) {
         for (int i = 0; i < segments.length; ++i) {
