@@ -310,7 +310,6 @@ public class RegionMapPut extends AbstractRegionMapPut {
       }
     } finally {
       finishEviction(disabledEviction);
-      logger.info("#LRJ doAfterCompletionActions: finishEviction done for entry {}", getRegionEntry());
     }
   }
 

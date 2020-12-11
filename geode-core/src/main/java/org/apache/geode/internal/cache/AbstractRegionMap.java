@@ -14,8 +14,6 @@
  */
 package org.apache.geode.internal.cache;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -322,16 +320,12 @@ public abstract class AbstractRegionMap extends BaseRegionMap
           new Exception("stack trace"));
       return; // can't remove tombstones except from the tombstone sweeper
     }
-    logger.info("#LRJ removeEntry called for {}", key);
     if (getEntryMap().remove(key, regionEntry)) {
       regionEntry.removePhase2();
-      logger.info("#LRJ removeEntry successful for {}, value is {}: ", key, regionEntry.getValue());
       success = true;
       if (updateStat) {
         incEntryCount(-1);
       }
-    } else {
-      logger.info("#LRJ removeEntry failed for key {} value is {} : ", key, regionEntry.getValue());
     }
   }
 

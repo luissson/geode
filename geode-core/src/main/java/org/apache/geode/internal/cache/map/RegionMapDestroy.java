@@ -121,11 +121,7 @@ public class RegionMapDestroy {
         doContinue = false;
         abortDestroyAndReturnFalse = false;
 
-        logger.info("#LRJ destroy: attempting get for key {}", event.getKey());
-
         regionEntry = focusedRegionMap.getEntry(event);
-
-        logger.info("#LRJ destroy: after get on key {}, key-value {} {}", event.getKey(), regionEntry == null? "null" : regionEntry.getKey(), regionEntry == null? "null" : regionEntry.getValue());
 
         invokeTestHookForConcurrentOperation();
 
@@ -157,23 +153,18 @@ public class RegionMapDestroy {
             }
           } else {
             handleExistingRegionEntry();
-            logger.info("#LRJ after handleExistingRegionEntry for key-value {} {} : " , regionEntry.getKey(), regionEntry.getValue());
           }
 
           if (abortDestroyAndReturnFalse) {
-            logger.info("#LRJ in destroy: abortDestroyAndReturnFalse for key-value {} {} ", regionEntry.getKey(), regionEntry.getValue());
             return false;
           }
           if (doContinue) {
-            logger.info("#LRJ in destroy: doContinue key-value {} {} ", regionEntry.getKey(), regionEntry.getValue());
             continue;
           }
 
           if (opCompleted) {
             EntryLogger.logDestroy(event);
           }
-
-          logger.info("#LRJ after destroy, key-value is {} {}", regionEntry == null? " entry is null" : regionEntry.getKey(), regionEntry == null? " entry is null" : regionEntry.getValue());
 
           return opCompleted;
 
@@ -235,10 +226,8 @@ public class RegionMapDestroy {
             && (event.isOriginRemote() || event.getContext() != null || removeRecoveredEntry));
 
         if (!regionEntry.isRemoved() || createTombstoneForConflictChecks) {
-          logger.info("#LRJ handleExistingRegionEntry: regionEntry for key {} has value {}", regionEntry.getKey(), regionEntry.getValue());
           retryIfIsRemovedPhase2();
           if (doContinue) {
-            logger.info("#LRJ handleExistingRegionEntry: doContinue=true, returning key {}", regionEntry.getKey());
             return;
           }
 
@@ -351,7 +340,6 @@ public class RegionMapDestroy {
 
   private void retryIfIsRemovedPhase2() {
     if (regionEntry.isRemovedPhase2()) {
-      logger.info("#LRJ retryIfIsRemovedPhase2 entry key, doContinue=true: {}", regionEntry.getKey());
       focusedRegionMap.getEntryMap().remove(event.getKey(), regionEntry);
       internalRegion.getCachePerfStats().incRetries();
       retry = true;
@@ -360,7 +348,6 @@ public class RegionMapDestroy {
   }
 
   private void retryRemoveWithTombstone() {
-    logger.info("#LRJ retryRemoveWithTombstone, regionEntry was null for key {}", event.getKey());
     if (!isEviction || internalRegion.getConcurrencyChecksEnabled()) {
       // The following ensures that there is not a concurrent operation
       // on the entry and leaves behind a tombstone if concurrencyChecksEnabled.
@@ -369,7 +356,6 @@ public class RegionMapDestroy {
       newRegionEntry = haveTombstone ? tombstone
           : focusedRegionMap.getEntryFactory().createEntry(internalRegion, event.getKey(),
               Token.REMOVED_PHASE1);
-      logger.info("#LRJ retryRemoveWithTombstone, created new regionEntry for key {}", event.getKey());
       synchronized (newRegionEntry) {
         if (haveTombstone && !tombstone.isTombstone()) {
           // we have to check this again under synchronization since it may have changed
@@ -379,27 +365,19 @@ public class RegionMapDestroy {
         }
         regionEntry = focusedRegionMap.putEntryIfAbsent(event.getKey(), newRegionEntry);
 
-        logger.info("#LRJ retryRemoveWithTombstone regionEntry after putEntryIfAbsent= {}", regionEntry == null? "null":regionEntry.toString());
-
         if (regionEntry != null && regionEntry != tombstone) {
-          logger.info("#LRJ retryRemoveWithTombstone, regionEntry put {}", event.getKey());
           // concurrent change - try again
           retry = true;
           doContinue = true;
           return;
         } else if (!isEviction) {
-          logger.info("#LRJ retryRemoveWithTombstone, regionEntry null after put, isEviction=false for key {}", event.getKey());
           try {
             handleEntryNotFound();
           } finally {
             removeEntryOrLeaveTombstone();
           }
         } else {
-          logger.info(
-              "#LRJ retryRemoveWithTombstone, regionEntry after put {} and isEviction {} for key {}", regionEntry == null? "null":regionEntry.toString(), isEviction, event.getKey());
-
-            removeEntryOrLeaveTombstone();
-
+            removeEntryOrLeaveTombstone(); // GEM-2133, remove evicted entries
         }
       } // synchronized(newRegionEntry)
     }
@@ -486,7 +464,6 @@ public class RegionMapDestroy {
   }
 
   private void removeEntryOrLeaveTombstone() {
-    logger.info("#LRJ removeEntryOrLeaveTombstone, removing newRegionEntry with key {}", newRegionEntry.getKey());
     // either remove the entry or leave a tombstone
     try {
       if (!event.isOriginRemote() && event.getVersionTag() != null
@@ -554,7 +531,6 @@ public class RegionMapDestroy {
   }
 
   private void handleEntryNotFound() {
-    logger.info("#LRJ handleEntryNotFound: called for key {}", event.getKey());
     boolean throwException = false;
     EntryNotFoundException entryNotFoundException = null;
 
@@ -609,8 +585,6 @@ public class RegionMapDestroy {
   private void handleMissingRegionEntry() {
     // removeRecoveredEntry should be false in this case
 
-    logger.info("#LRJ handleMissingRegionEntry: for key {}", event.getKey());
-
     newRegionEntry = focusedRegionMap.getEntryFactory().createEntry(internalRegion, event.getKey(),
         Token.REMOVED_PHASE1);
     IndexManager oqlIndexManager = internalRegion.getIndexManager();
@@ -623,7 +597,6 @@ public class RegionMapDestroy {
         // what is this doing?
         removeRegionEntryUntilCompleted();
         if (abortDestroyAndReturnFalse) {
-          logger.info("#LRJ handleMissingRegionEntry abortDestroyAndReturnFalse return: " + event.getKey());
           return;
         }
         if (!opCompleted) {
@@ -640,7 +613,6 @@ public class RegionMapDestroy {
               if (isEviction) {
                 opCompleted = false;
                 abortDestroyAndReturnFalse = true;
-                logger.info("#LRJ handleMissingRegionEntry abortDestroyAndReturnFalse=true return: " + event.getKey());
                 return;
               }
               destroyEntryInternal(newRegionEntry, oldRegionEntry);

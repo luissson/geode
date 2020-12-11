@@ -114,7 +114,6 @@ abstract class AbstractEvictionList implements EvictionList {
 
   @Override
   public synchronized void destroyEntry(EvictionNode evictionNode) {
-    logger.info("destroyEntry called for {}", evictionNode);
     if (logger.isTraceEnabled(LogMarker.LRU_CLOCK_VERBOSE)) {
       logger.trace(LogMarker.LRU_CLOCK_VERBOSE, "destroyEntry called for {}", evictionNode);
     }

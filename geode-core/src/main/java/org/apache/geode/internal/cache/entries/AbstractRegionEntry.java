@@ -18,8 +18,6 @@ import static org.apache.geode.internal.offheap.annotations.OffHeapIdentifier.AB
 import static org.apache.geode.internal.offheap.annotations.OffHeapIdentifier.ABSTRACT_REGION_ENTRY_PREPARE_VALUE_FOR_CACHE;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 
 import org.apache.logging.log4j.Logger;
 

@@ -1379,9 +1379,6 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
           // serialize search/load threads if not in txn
           value = getDataView().findObject(keyInfo, this, isCreate, generateCallbacks, value,
               disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones);
-
-          logger.info("#LRJ LocalRegion: findObject return for key {}: {}", key, value);
-
           if (!returnTombstones && value == Token.TOMBSTONE) {
             value = null;
           }
@@ -1472,9 +1469,6 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
       isCreate = localValue == null;
       result = findObjectInSystem(keyInfo, isCreate, null, generateCallbacks, localValue,
           disableCopyOnRead, preferCD, requestingClient, clientEvent, returnTombstones);
-
-      logger.info("#LRJ getObject: findObjectInSystem returned {}", result);
-
     } else {
       // For PRs we don't want to deserialize the value and we can't use findObjectInSystem
       // because it can invoke code that is transactional.
@@ -6624,7 +6618,6 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
 
     @Released
     final EntryEventImpl event = generateEvictDestroyEvent(entry.getKey());
-    logger.info("#LRJ evictDestroy: created event succcessfully for key {}", entry.getKey());
     try {
       return mapDestroy(event, false, // cacheWrite
           true, // isEviction
@@ -8407,7 +8400,6 @@ public class LocalRegion extends AbstractRegion implements LoaderHelperFactory,
       value = destroy(key);
     } catch (EntryNotFoundException ignore) {
       // No need to log this exception; caller can test for null;
-      logger.info("#LRJ encountered EntryNotFound LocalRegion.remove key {}", key, ignore);
     }
     return value;
   }
