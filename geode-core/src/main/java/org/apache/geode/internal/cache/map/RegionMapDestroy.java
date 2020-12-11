@@ -345,11 +345,6 @@ public class RegionMapDestroy {
       if (regionEntry.isInUseByTransaction()) {
         opCompleted = false;
         abortDestroyAndReturnFalse = true;
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        new Exception().printStackTrace(pw);
-        logger.info("#LRJ abortLocalExpirationIfEntryIsInUseByTransaction entry key: " + event.getKey());
-        logger.info("#LRJ abortLocalExpirationIfEntryIsInUseByTransaction already removed stack trace: " + sw.toString());
       }
     }
   }
@@ -484,16 +479,7 @@ public class RegionMapDestroy {
       internalRegion.checkReadiness();
       if (regionEntry.isRemoved() && !regionEntry.isTombstone()) {
         if (!removed) {
-
-          StringWriter sw = new StringWriter();
-          PrintWriter pw = new PrintWriter(sw);
-          new Exception().printStackTrace(pw);
-          logger.info("Failed removeEntry stacktrace: " + sw.toString());
-          logger.info("Failed to removeEntry, trying again: " + regionEntry.toString());
-
           focusedRegionMap.removeEntry(event.getKey(), regionEntry, true, event, internalRegion);
-
-          logger.info("After removeEntry, region entry entry map {}", focusedRegionMap.getEntryMap().get(event.getKey()));
         }
       }
     }
@@ -627,13 +613,6 @@ public class RegionMapDestroy {
 
     newRegionEntry = focusedRegionMap.getEntryFactory().createEntry(internalRegion, event.getKey(),
         Token.REMOVED_PHASE1);
-
-    StringWriter sw = new StringWriter();
-    PrintWriter pw = new PrintWriter(sw);
-    new Exception().printStackTrace(pw);
-    logger.info("#LRJ handleMissingRegionEntry entry key: " + event.getKey());
-    logger.info("#LRJ handleMissingRegionEntry stack trace: " + sw.toString());
-
     IndexManager oqlIndexManager = internalRegion.getIndexManager();
     if (oqlIndexManager != null) {
       oqlIndexManager.waitForIndexInit();
@@ -713,13 +692,6 @@ public class RegionMapDestroy {
             if (!focusedRegionMap.confirmEvictionDestroy(oldRegionEntry)) {
               opCompleted = false;
               abortDestroyAndReturnFalse = true;
-
-              StringWriter sw = new StringWriter();
-              PrintWriter pw = new PrintWriter(sw);
-              new Exception().printStackTrace(pw);
-              logger.info("#LRJ removeRegionEntryUntilCompleted entry key: " + event.getKey());
-              logger.info("#LRJ removeRegionEntryUntilCompleted stack trace: " + sw.toString());
-
               return;
             }
           }

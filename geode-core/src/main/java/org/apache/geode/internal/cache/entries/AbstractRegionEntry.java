@@ -259,13 +259,6 @@ public abstract class AbstractRegionEntry implements HashRegionEntry<Object, Obj
       throws RegionClearedException {
     assert region.getVersionVector() != null;
     assert version != null;
-
-    StringWriter sw = new StringWriter();
-    PrintWriter pw = new PrintWriter(sw);
-    new Exception().printStackTrace(pw);
-    logger.info("#LRJ makeTombstone, who calls me? \n{}", sw.toString());
-
-
     boolean wasTombstone = isTombstone();
     setRecentlyUsed(region);
     boolean newEntry = getValueAsToken() == Token.REMOVED_PHASE1;

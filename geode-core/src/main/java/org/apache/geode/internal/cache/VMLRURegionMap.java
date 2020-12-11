@@ -799,14 +799,6 @@ public class VMLRURegionMap extends AbstractRegionMap {
     // We assume here that a LRURegionMap contains LRUEntries
     EvictableEntry lruRe = (EvictableEntry) regionEntry;
     if (lruRe.isInUseByTransaction() || lruRe.isDestroyed()) {
-
-      StringWriter sw = new StringWriter();
-      PrintWriter pw = new PrintWriter(sw);
-      new Exception().printStackTrace(pw);
-      logger.info("#LRJ confirmEvictionDestroy tx or destroy?: " + lruRe.isInUseByTransaction() + " " + lruRe.isDestroyed());
-      logger.info("#LRJ confirmEvictionDestroy region entry: " + regionEntry.toString());
-      logger.info("#LRJ confirmEvictionDestroy stack trace: " + sw.toString());
-
       lruRe.unsetEvicted();
       return false;
     } else {
