@@ -402,6 +402,9 @@ public class RegionMapDestroy {
         } else {
           logger.info(
               "#LRJ retryRemoveWithTombstone, regionEntry after put {} and isEviction {} for key {}", regionEntry == null? "null":regionEntry.toString(), isEviction, event.getKey());
+
+            removeEntryOrLeaveTombstone();
+
         }
       } // synchronized(newRegionEntry)
     }
