@@ -4,11 +4,10 @@ import static org.apache.geode.test.dunit.VM.getVM;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.Serializable;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -24,8 +23,6 @@ import org.apache.geode.internal.cache.execute.data.CustId;
 import org.apache.geode.internal.cache.execute.data.Customer;
 import org.apache.geode.internal.cache.execute.data.Order;
 import org.apache.geode.internal.cache.execute.data.OrderId;
-import org.apache.geode.logging.internal.log4j.api.LogService;
-import org.apache.geode.test.dunit.LogWriterUtils;
 import org.apache.geode.test.dunit.VM;
 import org.apache.geode.test.dunit.rules.CacheRule;
 import org.apache.geode.test.dunit.rules.DistributedRule;
@@ -54,7 +51,7 @@ public class RemoteTXDUnitTest implements Serializable {
     getVM(1).invoke(() -> cacheRule.createCache());
   }
 
-  void initializeVMRegions(boolean isAccessor, int redundantCopies){
+  void initializeVMRegions(boolean isAccessor, int numBuckets, int redundantCopies){
     //configure then create partition region for distributed reference
     cacheRule.getCache().createRegionFactory()
         .setScope(Scope.DISTRIBUTED_ACK)
@@ -65,7 +62,7 @@ public class RemoteTXDUnitTest implements Serializable {
     //configure partition region for customers
     PartitionAttributesFactory customerParAttrFac = new PartitionAttributesFactory();
     PartitionAttributes customerParAttr = customerParAttrFac
-        .setTotalNumBuckets(4)
+        .setTotalNumBuckets(numBuckets)
         .setLocalMaxMemory(isAccessor ? 0 : 1)
         .setPartitionResolver(new CustomerIDPartitionResolver("resolver1"))
         .setRedundantCopies(redundantCopies).create();
@@ -73,7 +70,7 @@ public class RemoteTXDUnitTest implements Serializable {
     //configure partition region for orders
     PartitionAttributesFactory orderParAttrFac = new PartitionAttributesFactory();
     PartitionAttributes orderParAttr = orderParAttrFac
-        .setTotalNumBuckets(4)
+        .setTotalNumBuckets(numBuckets)
         .setLocalMaxMemory(isAccessor ? 0 : 1)
         .setPartitionResolver(new CustomerIDPartitionResolver("resolver2"))
         .setRedundantCopies(redundantCopies).create();
@@ -163,10 +160,6 @@ public class RemoteTXDUnitTest implements Serializable {
     Region<OrderId, Order> orderRegion = cacheRule.getCache().getRegion(ORDER);
     Region<CustId, Customer> refRegion = cacheRule.getCache().getRegion(D_REFERENCE);
 
-    assertEquals(customerIds.length, customerRegion.size());
-    assertEquals(orderIds.length, orderRegion.size());
-    assertEquals(customerIds.length, refRegion.size());
-
     //Get and check data from regions
     for(int i = 0; i < customerIds.length; i++){
       assertEquals(customers[i], customerRegion.get(customerIds[i]));
@@ -206,21 +199,60 @@ public class RemoteTXDUnitTest implements Serializable {
     validateRegionData(customerIds, orderIds, customers, orders);
   }
 
+  public void verifyPutsCommit() {
+    CustId customerId = new CustId(1);
+    OrderId orderId = new OrderId(1, customerId);
+    Customer customer = new Customer("Geode", "Beaverton");
+    Order order = new Order("order");
+
+    OrderId[] orderIds = new OrderId[]{orderId};
+    CustId[] customerIds = new CustId[]{customerId};
+    Customer[] customers = new Customer[]{customer};
+    Order[] orders = new Order[]{order};
+
+    validateRegionData(customerIds, orderIds, customers, orders);
+  }
+
+  public void verifyPutsRollback() {
+    Region<CustId, Customer> customerRegion = cacheRule.getCache().getRegion(CUSTOMER);
+    Region<OrderId, Order> orderRegion = cacheRule.getCache().getRegion(ORDER);
+    Region<CustId, Customer> refRegion = cacheRule.getCache().getRegion(D_REFERENCE);
+
+    CustId customerId = new CustId(1);
+    OrderId orderId = new OrderId(1, customerId);
+
+    assertNull(customerRegion.get(customerId));
+    assertNull(orderRegion.get(orderId));
+    assertNull(refRegion.get(customerId));
+
+    assertFalse(customerRegion.containsValueForKey(customerId));
+    assertFalse(orderRegion.containsValueForKey(orderId));
+    assertFalse(refRegion.containsValueForKey(customerId));
+  }
+
   public boolean isTxInProgress(TXId txId) {
     TXManagerImpl txMan = cacheRule.getCache().getTxManager();
     return txMan.isHostedTxInProgress(txId);
   }
 
-  public void checkTxRegions(TXId txId, int numElementsPerRegion) {
+  public void checkTxRegions(TXId txId, int numBuckets, int numElementsPerRegion, boolean isPut) {
     TXManagerImpl txMan = cacheRule.getCache().getTxManager();
     TXStateProxy tx = txMan.getHostedTXState(txId);
-    for(InternalRegion region : tx.getRegions()) {
+    if(numElementsPerRegion >= numBuckets) {
+      assertEquals(2L * numBuckets + 1, tx.getRegions().size()); // + 1 is for ref region
+      } else {
+      assertEquals(2L * numElementsPerRegion + 1, tx.getRegions().size()); }
+      for(InternalRegion region : tx.getRegions()) {
       assertTrue(region instanceof DistributedRegion);
       TXRegionState regionState = tx.readRegion(region);
-      for( Object key : regionState.getEntryKeys()){
+      for( Object key : regionState.getEntryKeys()) {
         TXEntryState entryState = regionState.readEntry(key);
         assertNotNull(entryState.getValue(key, region, false));
-        assertFalse(entryState.isDirty());
+        if(isPut) {
+          assertTrue(entryState.isDirty());
+        } else {
+          assertFalse(entryState.isDirty());
+        }
       }
     }
   }
@@ -239,29 +271,34 @@ public class RemoteTXDUnitTest implements Serializable {
   }
 
   @Test
-  public void testBasicTxPutAndCommit() {
+  public void testTxPutAndCommit() {
+    int numElementsPerRegion = 5;
+    int numBuckets = 4;
     VM accessor = getVM(0);
     VM datastore = getVM(1);
-
-    accessor.invoke(()->initializeVMRegions(true,0));
-    datastore.invoke(()->initializeVMRegions(false,0));
-    datastore.invoke(()->populateRegions(5));
+    accessor.invoke(()->initializeVMRegions(true, numBuckets, 0));
+    datastore.invoke(()->initializeVMRegions(false, numBuckets, 0));
+    datastore.invoke(()->populateRegions(numElementsPerRegion));
 
     TXId txId = accessor.invoke(this::DoTXPuts);
 
     assertTrue(datastore.invoke(()-> isTxInProgress(txId)));
 
+    datastore.invoke(()->checkTxRegions(txId, numBuckets, 1, true));
+
     accessor.invoke(()->completeTx(true, txId));
 
     assertFalse(datastore.invoke(()-> isTxInProgress(txId)));
+
+    accessor.invoke(this::verifyPutsCommit);
   }
 
   @Test
-  public void testBasicTxPutAndRollback() {
+  public void testTxPutAndRollback() {
     VM accessor = getVM(0);
     VM datastore = getVM(1);
-    accessor.invoke(()->initializeVMRegions(true,0));
-    datastore.invoke(()->initializeVMRegions(false,0));
+    accessor.invoke(()->initializeVMRegions(true,4, 0));
+    datastore.invoke(()->initializeVMRegions(false,4, 0));
     datastore.invoke(()->populateRegions(5));
 
     TXId txId = accessor.invoke(this::DoTXPuts);
@@ -271,22 +308,25 @@ public class RemoteTXDUnitTest implements Serializable {
     accessor.invoke(()->completeTx(false, txId));
 
     assertFalse(datastore.invoke(()-> isTxInProgress(txId)));
+
+    accessor.invoke(this::verifyPutsRollback);
   }
 
   @Test
-  public void testBasicTxGet() {
-    int numElementsPerRegion = 5; // 3 regions
+  public void testTxGet() {
+    int numElementsPerRegion = 5;
+    int numBuckets = 4;
     VM accessor = getVM(0);
     VM datastore = getVM(1);
-    accessor.invoke(()->initializeVMRegions(true,0));
-    datastore.invoke(()->initializeVMRegions(false,0));
+    accessor.invoke(()->initializeVMRegions(true, numBuckets, 0));
+    datastore.invoke(()->initializeVMRegions(false, numBuckets, 0));
     datastore.invoke(()->populateRegions(numElementsPerRegion));
 
     final TXId txId = accessor.invoke(()->DoTXGets(numElementsPerRegion));
 
     assertTrue(datastore.invoke(()-> isTxInProgress(txId)));
 
-    datastore.invoke(()->checkTxRegions(txId, numElementsPerRegion));
+    datastore.invoke(()->checkTxRegions(txId, numBuckets, numElementsPerRegion, false));
 
     accessor.invoke(()->completeTx(true, txId));
 
@@ -294,6 +334,4 @@ public class RemoteTXDUnitTest implements Serializable {
 
     accessor.invoke(()->verifyGetsCommit(numElementsPerRegion));
   }
-
-
 }
