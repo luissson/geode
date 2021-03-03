@@ -33,12 +33,6 @@ public class RemoteTXDUnitTest implements Serializable {
   protected final String ORDER = "orderRegion";
   protected final String D_REFERENCE = "distrReference";
 
-  public int initNumElements;
-  public OrderId[] initOrderIds;
-  public CustId[] initCustomerIds;
-  public Customer[] initCustomers;
-  public Order[] initOrders;
-
   @Rule
   public DistributedRule distributedRule = new DistributedRule();
 
@@ -334,4 +328,7 @@ public class RemoteTXDUnitTest implements Serializable {
 
     accessor.invoke(()->verifyGetsCommit(numElementsPerRegion));
   }
+
+
+
 }
