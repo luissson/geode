@@ -476,6 +476,8 @@ public class TXState implements TXStateInterface {
                 "Transactional data moved, due to rebalancing.");
             re.initCause(cce);
             throw re;
+          } else {
+            throw cce;
           }
         }
       }
