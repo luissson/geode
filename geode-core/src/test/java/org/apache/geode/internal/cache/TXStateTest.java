@@ -396,7 +396,8 @@ public class TXStateTest {
   public void commitConvertsCommitConflictExceptionToTransactionDataRebalancedExceptionIfCausedByRegionDestroyedException() {
     TXState txState = spy(new TXState(txStateProxy, false, disabledClock()));
     CommitConflictException cce = new CommitConflictException("Conflict caused by cache exception");
-    RegionDestroyedException rde = new RegionDestroyedException("Region was destroyed", "pathToRegion");
+    RegionDestroyedException rde =
+        new RegionDestroyedException("Region was destroyed", "pathToRegion");
     cce.initCause(rde);
 
     doThrow(cce).when(txState).reserveAndCheck();

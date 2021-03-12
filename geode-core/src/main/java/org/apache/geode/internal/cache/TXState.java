@@ -470,8 +470,8 @@ public class TXState implements TXStateInterface {
       if (this.locks == null) {
         try {
           reserveAndCheck();
-        } catch(CommitConflictException cce) {
-          if(cce.getCause() instanceof RegionDestroyedException) {
+        } catch (CommitConflictException cce) {
+          if (cce.getCause() instanceof RegionDestroyedException) {
             RuntimeException re = new TransactionDataRebalancedException(
                 "Transactional data moved, due to rebalancing.");
             re.initCause(cce);
