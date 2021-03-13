@@ -393,7 +393,7 @@ public class TXStateTest {
   }
 
   @Test
-  public void commitConvertsCommitConflictExceptionToTransactionDataRebalancedExceptionIfCausedByRegionDestroyedException() {
+  public void commitConvertsCommitConflictExceptionToTransactionDataRebalancedExceptionIfCausedByRegionDestroyedExceptionFromReserveAndCheck() {
     TXState txState = spy(new TXState(txStateProxy, false, disabledClock()));
     CommitConflictException cce = new CommitConflictException("Conflict caused by cache exception");
     RegionDestroyedException rde =
@@ -405,5 +405,17 @@ public class TXStateTest {
     Throwable caughtException = catchThrowable(txState::commit);
 
     assertThat(caughtException).isInstanceOf(TransactionDataRebalancedException.class);
+  }
+
+  @Test
+  public void commitThrowsCommitConflictExceptionFromReserveAndCheck() {
+    TXState txState = spy(new TXState(txStateProxy, false, disabledClock()));
+    CommitConflictException cce = new CommitConflictException("Conflict caused by cache exception");
+
+    doThrow(cce).when(txState).reserveAndCheck();
+
+    Throwable caughtException = catchThrowable(txState::commit);
+
+    assertThat(caughtException).isEqualTo(cce);
   }
 }
